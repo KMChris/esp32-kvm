@@ -1,0 +1,7 @@
+menu "Application"
+
+config APP_BLE_DEVICE_NAME
+    string "BLE device name"
+    default "ESP32"
+
+endmenu
