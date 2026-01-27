@@ -598,6 +598,8 @@ class KVMController:
         self._is_running = True
         self._exit_requested = False
         self._is_pasting = False
+        self._paste_cancel_requested = False
+        self._ctrl_physical_down = False
 
     def run(self):
         if not self._bridge.connect():
@@ -699,8 +701,16 @@ class KVMController:
         if vk is None:
             return
 
+        if vk in (VK_LCONTROL, VK_RCONTROL):
+            self._ctrl_physical_down = True
+
+        if self._is_pasting:
+            if vk == VK_INSERT and self._ctrl_physical_down:
+                self._paste_cancel_requested = True
+            return
+
         if vk == VK_INSERT and (self._state.active_modifiers & (KeyboardModifier.CTRL_LEFT | KeyboardModifier.CTRL_RIGHT)):
-            self._type_clipboard_as_keystrokes()
+            self._start_clipboard_paste()
             return
 
         modifier = VK_TO_MODIFIER.get(vk)
@@ -720,6 +730,12 @@ class KVMController:
 
         vk = self._get_vk_from_key(key)
         if vk is None:
+            return
+
+        if vk in (VK_LCONTROL, VK_RCONTROL):
+            self._ctrl_physical_down = False
+
+        if self._is_pasting:
             return
 
         modifier = VK_TO_MODIFIER.get(vk)
@@ -804,12 +820,9 @@ class KVMController:
         return max(min_val, min(max_val, value))
 
     def _type_clipboard_as_keystrokes(self):
-        if self._is_pasting:
-            return
-
-        self._is_pasting = True
         try:
             self._release_control_modifiers()
+            self._clear_keyboard_state()
             text = self._get_clipboard_text()
             if not text:
                 return
@@ -817,14 +830,24 @@ class KVMController:
             normalized = text.replace("\r\n", "\n").replace("\r", "\n")
 
             for ch in normalized:
+                if self._paste_cancel_requested:
+                    break
                 key_info = self._translate_char_to_hid(ch)
                 if key_info is None:
                     continue
                 modifiers, keycode = key_info
                 self._send_keypress(modifiers, keycode)
-                time.sleep(0.02)
+                time.sleep(0.04)
         finally:
             self._is_pasting = False
+
+    def _start_clipboard_paste(self):
+        if self._is_pasting:
+            return
+
+        self._is_pasting = True
+        self._paste_cancel_requested = False
+        threading.Thread(target=self._type_clipboard_as_keystrokes, daemon=True).start()
 
     def _send_keypress(self, modifiers, keycode):
         self._bridge.send_keyboard_report(modifiers, [keycode])
@@ -835,6 +858,12 @@ class KVMController:
         if self._state.active_modifiers & ctrl_mask:
             self._state.active_modifiers &= ~ctrl_mask
             self._sync_keyboard_state()
+
+    def _clear_keyboard_state(self):
+        if self._state.pressed_keys or self._state.active_modifiers:
+            self._state.pressed_keys.clear()
+            self._state.active_modifiers = 0
+        self._bridge.send_keyboard_report(0, [])
 
     def _translate_char_to_hid(self, ch):
         if ch in CHAR_TO_HID:
