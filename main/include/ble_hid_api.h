@@ -69,7 +69,7 @@ esp_err_t esp_hidd_profile_init(void);
 esp_err_t esp_hidd_profile_deinit(void);
 uint16_t esp_hidd_get_version(void);
 void esp_hidd_send_keyboard_value(uint16_t conn_id, key_mask_t mods, uint8_t *keys, uint8_t num);
-void esp_hidd_send_mouse_value(uint16_t conn_id, uint8_t btn, int8_t x, int8_t y, int8_t w);
+void esp_hidd_send_mouse_value(uint16_t conn_id, uint8_t btn, int16_t x, int16_t y, int8_t w);
 
 #endif
 

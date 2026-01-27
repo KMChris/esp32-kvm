@@ -5,7 +5,6 @@
 #include "esp_timer.h"
 #include "nvs_flash.h"
 #include "esp_bt.h"
-#include "esp_sleep.h"
 #include "esp_gap_ble_api.h"
 #include "esp_bt_main.h"
 #include "driver/uart.h"
@@ -178,12 +177,6 @@ static void uart_init(void) {
     uart_param_config(UART_NUM_0, &cfg);
 }
 
-static bool wait_wakeup(void) {
-    uint8_t buf[8];
-    int n = uart_read_bytes(UART_NUM_0, buf, 6, pdMS_TO_TICKS(500));
-    return (n >= 4 && memcmp(buf, "WAKE", 4) == 0);
-}
-
 static void conn_init(void) {
     for (uint8_t i = 0; i < MAX_CONN; i++) {
         g.slots[i].id = -1;
@@ -224,11 +217,6 @@ static void ble_init(void) {
 
 void app_main(void) {
     uart_init();
-    
-    if (!wait_wakeup()) {
-        uart_driver_delete(UART_NUM_0);
-        esp_deep_sleep_start();
-    }
 
     g.events = xEventGroupCreate();
     proto_init(&g.proto, broadcast_kbd, broadcast_mouse);

@@ -24,29 +24,23 @@ class RawInputFlag(IntFlag):
 
 class RawInputType(IntEnum):
     MOUSE = 0
-    KEYBOARD = 1
 
 
 class RawInputCommand(IntEnum):
     INPUT = 0x10000003
 
 
-class KeyboardFlag(IntFlag):
-    BREAK = 1
-    E0 = 2
-    E1 = 4
-
-
 class HidUsage(IntEnum):
     GENERIC_DESKTOP = 0x01
     MOUSE = 0x02
-    KEYBOARD = 0x06
 
 
 class MouseButton(IntFlag):
     LEFT = 1
     RIGHT = 2
     MIDDLE = 4
+    BACK = 8
+    FORWARD = 16
 
 
 class KeyboardModifier(IntFlag):
@@ -60,50 +54,97 @@ class KeyboardModifier(IntFlag):
     GUI_RIGHT = 0x80
 
 
-SCANCODE_TO_HID = {
-    0x1E: 0x04, 0x30: 0x05, 0x2E: 0x06, 0x20: 0x07, 0x12: 0x08, 0x21: 0x09,
-    0x22: 0x0A, 0x23: 0x0B, 0x17: 0x0C, 0x24: 0x0D, 0x25: 0x0E, 0x26: 0x0F,
-    0x32: 0x10, 0x31: 0x11, 0x18: 0x12, 0x19: 0x13, 0x10: 0x14, 0x13: 0x15,
-    0x1F: 0x16, 0x14: 0x17, 0x16: 0x18, 0x2F: 0x19, 0x11: 0x1A, 0x2D: 0x1B,
-    0x15: 0x1C, 0x2C: 0x1D,
-    0x02: 0x1E, 0x03: 0x1F, 0x04: 0x20, 0x05: 0x21, 0x06: 0x22,
-    0x07: 0x23, 0x08: 0x24, 0x09: 0x25, 0x0A: 0x26, 0x0B: 0x27,
-    0x1C: 0x28, 0x01: 0x29, 0x0E: 0x2A, 0x0F: 0x2B, 0x39: 0x2C,
-    0x0C: 0x2D, 0x0D: 0x2E, 0x1A: 0x2F, 0x1B: 0x30, 0x2B: 0x31,
-    0x27: 0x33, 0x28: 0x34, 0x29: 0x35, 0x33: 0x36, 0x34: 0x37, 0x35: 0x38,
-    0x3B: 0x3A, 0x3C: 0x3B, 0x3D: 0x3C, 0x3E: 0x3D, 0x3F: 0x3E, 0x40: 0x3F,
-    0x41: 0x40, 0x42: 0x41, 0x43: 0x42, 0x44: 0x43, 0x57: 0x44, 0x58: 0x45,
-    0x3A: 0x39, 0x46: 0x47, 0x45: 0x53,
-    0x52: 0x62, 0x4F: 0x59, 0x50: 0x5A, 0x51: 0x5B, 0x4B: 0x5C,
-    0x4C: 0x5D, 0x4D: 0x5E, 0x47: 0x5F, 0x48: 0x60, 0x49: 0x61,
-    0x37: 0x55, 0x4E: 0x57, 0x4A: 0x56, 0x53: 0x63,
+# Windows Virtual Key Code -> HID Usage Code
+VK_TO_HID = {
+    # Letters A-Z (VK 0x41-0x5A -> HID 0x04-0x1D)
+    0x41: 0x04, 0x42: 0x05, 0x43: 0x06, 0x44: 0x07, 0x45: 0x08, 0x46: 0x09,
+    0x47: 0x0A, 0x48: 0x0B, 0x49: 0x0C, 0x4A: 0x0D, 0x4B: 0x0E, 0x4C: 0x0F,
+    0x4D: 0x10, 0x4E: 0x11, 0x4F: 0x12, 0x50: 0x13, 0x51: 0x14, 0x52: 0x15,
+    0x53: 0x16, 0x54: 0x17, 0x55: 0x18, 0x56: 0x19, 0x57: 0x1A, 0x58: 0x1B,
+    0x59: 0x1C, 0x5A: 0x1D,
+    # Digits 0-9 (VK 0x30-0x39 -> HID 0x27, 0x1E-0x26)
+    0x30: 0x27, 0x31: 0x1E, 0x32: 0x1F, 0x33: 0x20, 0x34: 0x21, 0x35: 0x22,
+    0x36: 0x23, 0x37: 0x24, 0x38: 0x25, 0x39: 0x26,
+    # Function keys F1-F12 (VK 0x70-0x7B -> HID 0x3A-0x45)
+    0x70: 0x3A, 0x71: 0x3B, 0x72: 0x3C, 0x73: 0x3D, 0x74: 0x3E, 0x75: 0x3F,
+    0x76: 0x40, 0x77: 0x41, 0x78: 0x42, 0x79: 0x43, 0x7A: 0x44, 0x7B: 0x45,
+    # Function keys F13-F24 (VK 0x7C-0x87 -> HID 0x68-0x73)
+    0x7C: 0x68, 0x7D: 0x69, 0x7E: 0x6A, 0x7F: 0x6B, 0x80: 0x6C, 0x81: 0x6D,
+    0x82: 0x6E, 0x83: 0x6F, 0x84: 0x70, 0x85: 0x71, 0x86: 0x72, 0x87: 0x73,
+    # Special keys
+    0x08: 0x2A,  # VK_BACK -> Backspace
+    0x09: 0x2B,  # VK_TAB -> Tab
+    0x0D: 0x28,  # VK_RETURN -> Enter
+    0x13: 0x48,  # VK_PAUSE -> Pause
+    0x14: 0x39,  # VK_CAPITAL -> Caps Lock
+    0x1B: 0x29,  # VK_ESCAPE -> Escape
+    0x20: 0x2C,  # VK_SPACE -> Space
+    0x21: 0x4B,  # VK_PRIOR -> Page Up
+    0x22: 0x4E,  # VK_NEXT -> Page Down
+    0x23: 0x4D,  # VK_END -> End
+    0x24: 0x4A,  # VK_HOME -> Home
+    0x25: 0x50,  # VK_LEFT -> Left Arrow
+    0x26: 0x52,  # VK_UP -> Up Arrow
+    0x27: 0x4F,  # VK_RIGHT -> Right Arrow
+    0x28: 0x51,  # VK_DOWN -> Down Arrow
+    0x2C: 0x46,  # VK_SNAPSHOT -> Print Screen
+    0x2D: 0x49,  # VK_INSERT -> Insert
+    0x2E: 0x4C,  # VK_DELETE -> Delete
+    # Numpad (VK 0x60-0x6F)
+    0x60: 0x62,  # VK_NUMPAD0
+    0x61: 0x59,  # VK_NUMPAD1
+    0x62: 0x5A,  # VK_NUMPAD2
+    0x63: 0x5B,  # VK_NUMPAD3
+    0x64: 0x5C,  # VK_NUMPAD4
+    0x65: 0x5D,  # VK_NUMPAD5
+    0x66: 0x5E,  # VK_NUMPAD6
+    0x67: 0x5F,  # VK_NUMPAD7
+    0x68: 0x60,  # VK_NUMPAD8
+    0x69: 0x61,  # VK_NUMPAD9
+    0x6A: 0x55,  # VK_MULTIPLY
+    0x6B: 0x57,  # VK_ADD
+    0x6C: 0x85,  # VK_SEPARATOR (Keypad Comma)
+    0x6D: 0x56,  # VK_SUBTRACT
+    0x6E: 0x63,  # VK_DECIMAL
+    0x6F: 0x54,  # VK_DIVIDE
+    # Lock keys
+    0x90: 0x53,  # VK_NUMLOCK
+    0x91: 0x47,  # VK_SCROLL
+    # OEM keys (US ANSI layout)
+    0xBA: 0x33,  # VK_OEM_1 -> Semicolon
+    0xBB: 0x2E,  # VK_OEM_PLUS -> Equal
+    0xBC: 0x36,  # VK_OEM_COMMA -> Comma
+    0xBD: 0x2D,  # VK_OEM_MINUS -> Minus
+    0xBE: 0x37,  # VK_OEM_PERIOD -> Period
+    0xBF: 0x38,  # VK_OEM_2 -> Slash
+    0xC0: 0x35,  # VK_OEM_3 -> Grave Accent (backtick)
+    0xDB: 0x2F,  # VK_OEM_4 -> Left Bracket
+    0xDC: 0x31,  # VK_OEM_5 -> Backslash
+    0xDD: 0x30,  # VK_OEM_6 -> Right Bracket
+    0xDE: 0x34,  # VK_OEM_7 -> Apostrophe
+    0xE2: 0x64,  # VK_OEM_102 -> Non-US Backslash (ISO keyboard)
+    # Application key
+    0x5D: 0x65,  # VK_APPS -> Application/Menu key
 }
 
-SCANCODE_TO_HID_EXTENDED = {
-    0x1C: 0x58, 0x35: 0x54, 0x52: 0x49, 0x47: 0x4A, 0x49: 0x4B,
-    0x53: 0x4C, 0x4F: 0x4D, 0x51: 0x4E, 0x4D: 0x4F, 0x4B: 0x50,
-    0x50: 0x51, 0x48: 0x52, 0x5D: 0x65, 0x38: 0x00, 0x1D: 0x00,
-    0x5B: 0x00, 0x5C: 0x00, 0x37: 0x46,
-}
-
-SCANCODE_TO_MODIFIER = {
-    0x1D: KeyboardModifier.CTRL_LEFT,
-    0x2A: KeyboardModifier.SHIFT_LEFT,
-    0x36: KeyboardModifier.SHIFT_RIGHT,
-    0x38: KeyboardModifier.ALT_LEFT,
-}
-
-SCANCODE_TO_MODIFIER_EXTENDED = {
-    0x1D: KeyboardModifier.CTRL_RIGHT,
-    0x38: KeyboardModifier.ALT_RIGHT,
-    0x5B: KeyboardModifier.GUI_LEFT,
-    0x5C: KeyboardModifier.GUI_RIGHT,
+# Windows Virtual Key Code -> HID Modifier
+VK_TO_MODIFIER = {
+    0xA0: KeyboardModifier.SHIFT_LEFT,   # VK_LSHIFT
+    0xA1: KeyboardModifier.SHIFT_RIGHT,  # VK_RSHIFT
+    0xA2: KeyboardModifier.CTRL_LEFT,    # VK_LCONTROL
+    0xA3: KeyboardModifier.CTRL_RIGHT,   # VK_RCONTROL
+    0xA4: KeyboardModifier.ALT_LEFT,     # VK_LMENU
+    0xA5: KeyboardModifier.ALT_RIGHT,    # VK_RMENU
+    0x5B: KeyboardModifier.GUI_LEFT,     # VK_LWIN
+    0x5C: KeyboardModifier.GUI_RIGHT,    # VK_RWIN
 }
 
 PYNPUT_TO_MOUSE_BUTTON = {
     mouse.Button.left: MouseButton.LEFT,
     mouse.Button.right: MouseButton.RIGHT,
     mouse.Button.middle: MouseButton.MIDDLE,
+    mouse.Button.x1: MouseButton.BACK,
+    mouse.Button.x2: MouseButton.FORWARD,
 }
 
 
@@ -112,12 +153,11 @@ class BridgeConfig:
     port: str = ""
     baudrate: int = 115200
     sensitivity: float = 1.0
-    poll_rate_hz: int = 100
+    poll_rate_hz: int = 125
     max_delta: int = 120
     reconnect_delay_seconds: float = 2.0
     reconnect_max_attempts: int = 5
-    toggle_scan_code: int = 0x1D
-    toggle_use_e1_prefix: bool = True
+    toggle_key: keyboard.Key = keyboard.Key.pause
 
 
 @dataclass
@@ -184,28 +224,10 @@ class _RAWMOUSE(ctypes.Structure):
     ]
 
 
-class _RAWKEYBOARD(ctypes.Structure):
-    _fields_ = [
-        ("MakeCode", wintypes.USHORT),
-        ("Flags", wintypes.USHORT),
-        ("Reserved", wintypes.USHORT),
-        ("VKey", wintypes.USHORT),
-        ("Message", wintypes.UINT),
-        ("ExtraInformation", wintypes.ULONG),
-    ]
-
-
 class _RAWINPUT_MOUSE(ctypes.Structure):
     _fields_ = [
         ("header", _RAWINPUTHEADER),
         ("mouse", _RAWMOUSE),
-    ]
-
-
-class _RAWINPUT_KEYBOARD(ctypes.Structure):
-    _fields_ = [
-        ("header", _RAWINPUTHEADER),
-        ("keyboard", _RAWKEYBOARD),
     ]
 
 
@@ -226,7 +248,6 @@ class _WNDCLASS(ctypes.Structure):
 
 class SerialBridge:
     PROTOCOL_HEADER = 0xFD
-    WAKE_SEQUENCE = b"WAKEUP"
     KEYBOARD_KEYS_COUNT = 6
 
     def __init__(self, config):
@@ -250,7 +271,6 @@ class SerialBridge:
                         timeout=0.1,
                         write_timeout=0.5,
                     )
-                    self._send_wake_sequence()
                     return True
                 except serial.SerialException:
                     if attempt < self._config.reconnect_max_attempts - 1:
@@ -263,22 +283,29 @@ class SerialBridge:
             self._close_connection_unsafe()
 
     def send_keyboard_report(self, modifiers, keys):
+        # Packet: [HEADER, modifiers, type=0x00, keys[0..5]]
         padded_keys = (keys + [0] * self.KEYBOARD_KEYS_COUNT)[:self.KEYBOARD_KEYS_COUNT]
-        packet = bytes([self.PROTOCOL_HEADER, modifiers, 0x00] + padded_keys)
+        data = bytes([modifiers, 0x00] + padded_keys)
+        checksum = self._calc_checksum(data)
+        packet = bytes([self.PROTOCOL_HEADER]) + data + bytes([checksum])
         return self._transmit(packet)
 
     def send_mouse_report(self, buttons, delta_x, delta_y, delta_wheel):
-        packet = bytes([
-            self.PROTOCOL_HEADER,
+        # Packet: [HEADER, 0x00, type=0x03, buttons, dx_lo, dx_hi, dy_lo, dy_hi, wheel]
+        dx = self._to_signed_word(delta_x)
+        dy = self._to_signed_word(delta_y)
+        data = bytes([
             0x00,
             0x03,
             buttons,
-            self._to_signed_byte(delta_x),
-            self._to_signed_byte(delta_y),
+            dx & 0xFF,
+            (dx >> 8) & 0xFF,
+            dy & 0xFF,
+            (dy >> 8) & 0xFF,
             self._to_signed_byte(delta_wheel),
-            0,
-            0,
         ])
+        checksum = self._calc_checksum(data)
+        packet = bytes([self.PROTOCOL_HEADER]) + data + bytes([checksum])
         return self._transmit(packet)
 
     def _close_connection_unsafe(self):
@@ -288,18 +315,6 @@ class SerialBridge:
             except Exception:
                 pass
             self._serial = None
-
-    def _send_wake_sequence(self):
-        if self._serial is None:
-            return
-
-        self._serial.dtr = False
-        self._serial.rts = True
-        time.sleep(0.1)
-        self._serial.rts = False
-        time.sleep(0.2)
-        self._serial.write(self.WAKE_SEQUENCE)
-        time.sleep(0.3)
 
     def _transmit(self, data):
         with self._lock:
@@ -314,8 +329,20 @@ class SerialBridge:
 
     @staticmethod
     def _to_signed_byte(value):
-        clamped = max(-127, min(127, value))
+        clamped = max(-127, min(127, int(value)))
         return clamped & 0xFF
+
+    @staticmethod
+    def _to_signed_word(value):
+        clamped = max(-32768, min(32767, int(value)))
+        return clamped & 0xFFFF
+
+    @staticmethod
+    def _calc_checksum(data):
+        xor_sum = 0
+        for byte in data:
+            xor_sum ^= byte
+        return xor_sum
 
     @staticmethod
     def find_esp32_port():
@@ -436,42 +463,6 @@ class RawMouseCapture(RawInputCapture):
                 self._on_move(delta_x, delta_y)
 
 
-class RawKeyboardCapture(RawInputCapture):
-    def __init__(self, on_key):
-        super().__init__("RawKeyboardWindow", HidUsage.KEYBOARD)
-        self._on_key = on_key
-
-    def _process_input(self, lparam):
-        size = wintypes.UINT(0)
-        _user32.GetRawInputData(
-            lparam,
-            RawInputCommand.INPUT,
-            None,
-            ctypes.byref(size),
-            ctypes.sizeof(_RAWINPUTHEADER),
-        )
-
-        if size.value == 0:
-            return
-
-        buffer = (ctypes.c_byte * size.value)()
-        _user32.GetRawInputData(
-            lparam,
-            RawInputCommand.INPUT,
-            buffer,
-            ctypes.byref(size),
-            ctypes.sizeof(_RAWINPUTHEADER),
-        )
-
-        raw_input = ctypes.cast(buffer, ctypes.POINTER(_RAWINPUT_KEYBOARD)).contents
-
-        if raw_input.header.dwType == RawInputType.KEYBOARD:
-            scan_code = raw_input.keyboard.MakeCode
-            flags = raw_input.keyboard.Flags
-            is_pressed = (flags & KeyboardFlag.BREAK) == 0
-            self._on_key(scan_code, flags, is_pressed)
-
-
 class CursorManager:
     def __init__(self):
         self._saved_position = None
@@ -532,56 +523,47 @@ class KVMController:
             print("\n[INFO] Shutdown complete")
 
     def _wait_for_activation(self):
-        toggle_key_name = self._get_toggle_key_display_name()
+        toggle_key_name = self._config.toggle_key.name.replace("_", " ").title()
         print(f"\n[LOCAL] Press '{toggle_key_name}' to enter remote mode")
 
         with keyboard.Listener(on_press=self._handle_activation_key) as listener:
             listener.join()
 
-    def _get_toggle_key_display_name(self):
-        if self._config.toggle_use_e1_prefix and self._config.toggle_scan_code == 0x1D:
-            return "Pause"
-        if self._config.toggle_scan_code == 0x46:
-            return "Scroll Lock"
-        return f"Scan 0x{self._config.toggle_scan_code:02X}"
-
     def _handle_activation_key(self, key):
-        if self._config.toggle_use_e1_prefix and key == keyboard.Key.pause:
-            return False
-        if (
-            not self._config.toggle_use_e1_prefix
-            and self._config.toggle_scan_code == 0x46
-            and key == keyboard.Key.scroll_lock
-        ):
+        if key == self._config.toggle_key:
             return False
         return None
 
     def _enter_remote_mode(self):
         self._is_active = True
         self._exit_requested = False
-        toggle_key_name = self._get_toggle_key_display_name()
+        toggle_key_name = self._config.toggle_key.name.replace("_", " ").title()
 
         print(f"\n[REMOTE] Control active ('{toggle_key_name}' = exit)")
 
         raw_mouse = RawMouseCapture(self._handle_raw_mouse_move)
-        raw_keyboard = RawKeyboardCapture(self._handle_raw_keyboard_event)
         raw_mouse.start()
-        raw_keyboard.start()
 
         with self._cursor.locked_context():
+            keyboard_listener = keyboard.Listener(
+                on_press=self._handle_key_press,
+                on_release=self._handle_key_release,
+                suppress=True,
+            )
             mouse_listener = mouse.Listener(
                 on_click=self._handle_mouse_click,
                 on_scroll=self._handle_mouse_scroll,
                 suppress=True,
             )
+            keyboard_listener.start()
             mouse_listener.start()
 
             while not self._exit_requested and self._is_running:
                 time.sleep(0.01)
 
+            keyboard_listener.stop()
             mouse_listener.stop()
 
-        raw_keyboard.stop()
         raw_mouse.stop()
         self._is_active = False
 
@@ -600,44 +582,54 @@ class KVMController:
         )
         self._flush_mouse_movement()
 
-    def _handle_raw_keyboard_event(self, scan_code, flags, is_pressed):
+    def _get_vk_from_key(self, key):
+        if hasattr(key, 'vk') and key.vk is not None:
+            return key.vk
+        if hasattr(key, 'value') and hasattr(key.value, 'vk'):
+            return key.value.vk
+        return None
+
+    def _handle_key_press(self, key):
         if not self._is_active:
             return
 
-        is_extended = (flags & KeyboardFlag.E0) != 0
-        is_e1 = (flags & KeyboardFlag.E1) != 0
+        if key == self._config.toggle_key:
+            self._exit_requested = True
+            return
 
-        if is_pressed and scan_code == self._config.toggle_scan_code:
-            if self._config.toggle_use_e1_prefix == is_e1:
-                self._exit_requested = True
-                return
+        vk = self._get_vk_from_key(key)
+        if vk is None:
+            return
 
-        if is_extended:
-            modifier = SCANCODE_TO_MODIFIER_EXTENDED.get(scan_code)
-            if modifier is not None:
-                self._update_modifier(modifier, is_pressed)
-                return
-            hid_code = SCANCODE_TO_HID_EXTENDED.get(scan_code)
-        else:
-            modifier = SCANCODE_TO_MODIFIER.get(scan_code)
-            if modifier is not None:
-                self._update_modifier(modifier, is_pressed)
-                return
-            hid_code = SCANCODE_TO_HID.get(scan_code)
+        modifier = VK_TO_MODIFIER.get(vk)
+        if modifier is not None:
+            self._state.active_modifiers |= modifier
+            self._sync_keyboard_state()
+            return
 
+        hid_code = VK_TO_HID.get(vk)
         if hid_code:
-            if is_pressed:
-                self._state.pressed_keys.add(hid_code)
-            else:
-                self._state.pressed_keys.discard(hid_code)
+            self._state.pressed_keys.add(hid_code)
             self._sync_keyboard_state()
 
-    def _update_modifier(self, modifier, is_pressed):
-        if is_pressed:
-            self._state.active_modifiers |= modifier
-        else:
+    def _handle_key_release(self, key):
+        if not self._is_active:
+            return
+
+        vk = self._get_vk_from_key(key)
+        if vk is None:
+            return
+
+        modifier = VK_TO_MODIFIER.get(vk)
+        if modifier is not None:
             self._state.active_modifiers &= ~modifier
-        self._sync_keyboard_state()
+            self._sync_keyboard_state()
+            return
+
+        hid_code = VK_TO_HID.get(vk)
+        if hid_code:
+            self._state.pressed_keys.discard(hid_code)
+            self._sync_keyboard_state()
 
     def _handle_mouse_click(self, x, y, button, is_pressed):
         button_mask = PYNPUT_TO_MOUSE_BUTTON.get(button, 0)
@@ -682,8 +674,8 @@ class KVMController:
         if not (dx or dy or dw):
             return
 
-        send_dx = int(self._clamp(dx, -127, 127))
-        send_dy = int(self._clamp(dy, -127, 127))
+        send_dx = int(self._clamp(dx, -32768, 32767))
+        send_dy = int(self._clamp(dy, -32768, 32767))
         send_dw = int(self._clamp(dw, -127, 127))
 
         self._state.accumulated_dx -= send_dx

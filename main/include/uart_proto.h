@@ -5,8 +5,9 @@
 #include <stdbool.h>
 
 #define PROTO_HEADER     0xFD
-#define PROTO_PKT_LEN    9
+#define PROTO_PKT_LEN    10
 #define PROTO_DATA_LEN   8
+#define PROTO_CHECKSUM_LEN 1
 
 #define PROTO_TYPE_KBD   0x00
 #define PROTO_TYPE_MOUSE 0x03
@@ -14,6 +15,7 @@
 typedef enum {
     PARSE_IDLE,
     PARSE_DATA,
+    PARSE_CHECKSUM,
 } proto_state_t;
 
 typedef struct {
@@ -23,8 +25,8 @@ typedef struct {
 
 typedef struct {
     uint8_t buttons;
-    int8_t dx;
-    int8_t dy;
+    int16_t dx;
+    int16_t dy;
     int8_t wheel;
 } mouse_report_t;
 
@@ -43,6 +45,7 @@ typedef struct {
     proto_state_t state;
     uint8_t idx;
     uint8_t buf[PROTO_DATA_LEN];
+    uint8_t checksum;
     proto_kbd_cb_t on_kbd;
     proto_mouse_cb_t on_mouse;
 } proto_ctx_t;
@@ -50,5 +53,7 @@ typedef struct {
 void proto_init(proto_ctx_t *ctx, proto_kbd_cb_t kbd_cb, proto_mouse_cb_t mouse_cb);
 void proto_feed(proto_ctx_t *ctx, uint8_t byte);
 void proto_reset(proto_ctx_t *ctx);
+
+uint8_t proto_calc_checksum(const uint8_t *data, uint8_t len);
 
 #endif

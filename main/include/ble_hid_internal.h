@@ -7,30 +7,30 @@
 #include "ble_hid_api.h"
 #include "hid_reports.h"
 
-#define CHAR_DECLARATION_SIZE    (sizeof(uint8_t))
-#define HIDD_VERSION             0x0100
-#define HID_MAX_APPS             1
-#define HID_NUM_REPORTS          5
-#define HID_RPT_ID_KEY_IN        1
-#define HID_RPT_ID_MOUSE_IN      3
-#define HID_RPT_ID_LED_OUT       1
-#define HID_RPT_ID_FEATURE       0
-#define HIDD_APP_ID              0x1812
-#define BATTERY_APP_ID           0x180f
-#define ATT_SVC_HID              0x1812
+#define CHAR_DECLARATION_SIZE       (sizeof(uint8_t))
+#define HIDD_VERSION                0x0100
+#define HID_MAX_APPS                1
+#define HID_NUM_REPORTS             5
+#define HID_RPT_ID_KEY_IN           1
+#define HID_RPT_ID_MOUSE_IN         3
+#define HID_RPT_ID_LED_OUT          1
+#define HID_RPT_ID_FEATURE          0
+#define HIDD_APP_ID                 0x1812
+#define BATTERY_APP_ID              0x180f
+#define ATT_SVC_HID                 0x1812
 #define HIDD_LE_NB_REPORT_INST_MAX  6
-#define HIDD_LE_REPORT_MAX_LEN   255
+#define HIDD_LE_REPORT_MAX_LEN      255
 #define HIDD_LE_REPORT_MAP_MAX_LEN  512
 #define HIDD_LE_BOOT_REPORT_MAX_LEN 8
-#define HID_FLAGS_REMOTE_WAKE    0x01
-#define HID_PROTOCOL_MODE_BOOT   0x00
-#define HID_PROTOCOL_MODE_REPORT 0x01
-#define HID_INFORMATION_LEN      4
-#define HID_REPORT_REF_LEN       2
-#define HID_KBD_FLAGS            HID_FLAGS_REMOTE_WAKE
-#define HID_REPORT_TYPE_INPUT    1
-#define HID_REPORT_TYPE_OUTPUT   2
-#define HID_REPORT_TYPE_FEATURE  3
+#define HID_FLAGS_REMOTE_WAKE       0x01
+#define HID_PROTOCOL_MODE_BOOT      0x00
+#define HID_PROTOCOL_MODE_REPORT    0x01
+#define HID_INFORMATION_LEN         4
+#define HID_REPORT_REF_LEN          2
+#define HID_KBD_FLAGS               HID_FLAGS_REMOTE_WAKE
+#define HID_REPORT_TYPE_INPUT       1
+#define HID_REPORT_TYPE_OUTPUT      2
+#define HID_REPORT_TYPE_FEATURE     3
 
 enum {
     HIDD_LE_IDX_SVC,
