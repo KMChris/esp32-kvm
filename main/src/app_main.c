@@ -7,7 +7,13 @@
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
 #include "esp_bt_main.h"
+
+#if CONFIG_IDF_TARGET_ESP32C3
+#include "driver/usb_serial_jtag.h"
+#else
 #include "driver/uart.h"
+#endif
+
 #include "ble_hid_api.h"
 #include "uart_proto.h"
 #include "app_config.h"
@@ -159,12 +165,23 @@ static void uart_rx_task(void *arg) {
     (void)arg;
     uint8_t byte;
     while (1) {
+#if CONFIG_IDF_TARGET_ESP32C3
+        if (usb_serial_jtag_read_bytes(&byte, 1, portMAX_DELAY) > 0)
+#else
         if (uart_read_bytes(UART_NUM_0, &byte, 1, portMAX_DELAY) > 0)
+#endif
             proto_feed(&g.proto, byte);
     }
 }
 
 static void uart_init(void) {
+#if CONFIG_IDF_TARGET_ESP32C3
+    usb_serial_jtag_driver_config_t cfg = {
+        .rx_buffer_size = UART_BUF_SIZE,
+        .tx_buffer_size = 256,
+    };
+    usb_serial_jtag_driver_install(&cfg);
+#else
     uart_config_t cfg = {
         .baud_rate = 115200,
         .data_bits = UART_DATA_8_BITS,
@@ -175,6 +192,7 @@ static void uart_init(void) {
     };
     uart_driver_install(UART_NUM_0, UART_BUF_SIZE, 0, 0, NULL, 0);
     uart_param_config(UART_NUM_0, &cfg);
+#endif
 }
 
 static void conn_init(void) {

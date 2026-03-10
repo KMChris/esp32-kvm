@@ -42,7 +42,7 @@ class MouseButton(IntFlag):
     BACK = 8
     FORWARD = 16
 
-
+    
 class KeyboardModifier(IntFlag):
     CTRL_LEFT = 0x01
     SHIFT_LEFT = 0x02
@@ -52,6 +52,12 @@ class KeyboardModifier(IntFlag):
     SHIFT_RIGHT = 0x20
     ALT_RIGHT = 0x40
     GUI_RIGHT = 0x80
+
+
+# Konfiguracja skrótów
+TOGGLE_KEY = keyboard.Key.scroll_lock
+PASTE_TRIGGER_VK = 0x2D  # VK_INSERT
+PASTE_TRIGGER_MODIFIERS = KeyboardModifier.CTRL_LEFT | KeyboardModifier.CTRL_RIGHT
 
 
 # Windows Virtual Key Code -> HID Usage Code
@@ -139,7 +145,6 @@ VK_TO_MODIFIER = {
     0x5C: KeyboardModifier.GUI_RIGHT,    # VK_RWIN
 }
 
-VK_INSERT = 0x2D
 VK_LCONTROL = 0xA2
 VK_RCONTROL = 0xA3
 
@@ -233,12 +238,12 @@ PYNPUT_TO_MOUSE_BUTTON = {
 class BridgeConfig:
     port: str = ""
     baudrate: int = 115200
-    sensitivity: float = 1.0
+    sensitivity: float = 0.5
     poll_rate_hz: int = 125
     max_delta: int = 120
     reconnect_delay_seconds: float = 2.0
     reconnect_max_attempts: int = 5
-    toggle_key: keyboard.Key = keyboard.Key.pause
+    toggle_key: keyboard.Key = TOGGLE_KEY
 
 
 @dataclass
@@ -362,12 +367,16 @@ class SerialBridge:
 
             for attempt in range(self._config.reconnect_max_attempts):
                 try:
-                    self._serial = serial.Serial(
-                        port=self._config.port,
-                        baudrate=self._config.baudrate,
-                        timeout=0.1,
-                        write_timeout=0.5,
-                    )
+                    self._serial = serial.Serial()
+                    self._serial.port = self._config.port
+                    self._serial.baudrate = self._config.baudrate
+                    self._serial.timeout = 0.1
+                    self._serial.write_timeout = 0.5
+                    
+                    self._serial.dtr = False
+                    self._serial.rts = False
+                    self._serial.open()
+
                     return True
                 except serial.SerialException:
                     if attempt < self._config.reconnect_max_attempts - 1:
@@ -443,11 +452,17 @@ class SerialBridge:
 
     @staticmethod
     def find_esp32_port():
-        known_chips = ("CP210", "CH34", "FTDI", "USB-SERIAL")
+        known_chips = ("CP210", "CH34", "FTDI", "USB-SERIAL", "JTAG", "WCH")
+        espressif_vids = ("303A",)
 
         for port_info in serial.tools.list_ports.comports():
-            description = (port_info.description or "").upper()
-            if any(chip in description for chip in known_chips):
+            desc = (port_info.description or "").upper()
+            hwid = (port_info.hwid or "").upper()
+            
+            if any(chip in desc for chip in known_chips) or "USB SERIAL DEVICE" in desc:
+                return port_info.device
+                
+            if any(vid in hwid for vid in espressif_vids):
                 return port_info.device
 
         return None
@@ -705,11 +720,11 @@ class KVMController:
             self._ctrl_physical_down = True
 
         if self._is_pasting:
-            if vk == VK_INSERT and self._ctrl_physical_down:
+            if vk == PASTE_TRIGGER_VK and self._ctrl_physical_down:
                 self._paste_cancel_requested = True
             return
 
-        if vk == VK_INSERT and (self._state.active_modifiers & (KeyboardModifier.CTRL_LEFT | KeyboardModifier.CTRL_RIGHT)):
+        if vk == PASTE_TRIGGER_VK and (self._state.active_modifiers & PASTE_TRIGGER_MODIFIERS):
             self._start_clipboard_paste()
             return
 

@@ -5,12 +5,11 @@ idf_component_register(SRCS "src/app_main.c"
                             "src/uart_proto.c"
                     INCLUDE_DIRS "include"
                     REQUIRES esp_hid
-                    PRIV_REQUIRES nvs_flash esp_driver_uart)
+                    PRIV_REQUIRES nvs_flash esp_driver_uart esp_driver_usb_serial_jtag)
 
 target_compile_options(${COMPONENT_LIB} PRIVATE
         -Wall
         -Wextra
-        -Wunused-parameter
         -Wshadow
         -Wformat=2
         -Wdouble-promotion
