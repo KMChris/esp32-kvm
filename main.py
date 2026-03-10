@@ -42,7 +42,7 @@ class MouseButton(IntFlag):
     BACK = 8
     FORWARD = 16
 
-
+    
 class KeyboardModifier(IntFlag):
     CTRL_LEFT = 0x01
     SHIFT_LEFT = 0x02
@@ -52,6 +52,12 @@ class KeyboardModifier(IntFlag):
     SHIFT_RIGHT = 0x20
     ALT_RIGHT = 0x40
     GUI_RIGHT = 0x80
+
+
+# Konfiguracja skrótów
+TOGGLE_KEY = keyboard.Key.scroll_lock
+PASTE_TRIGGER_VK = 0x2D  # VK_INSERT
+PASTE_TRIGGER_MODIFIERS = KeyboardModifier.CTRL_LEFT | KeyboardModifier.CTRL_RIGHT
 
 
 # Windows Virtual Key Code -> HID Usage Code
@@ -139,6 +145,86 @@ VK_TO_MODIFIER = {
     0x5C: KeyboardModifier.GUI_RIGHT,    # VK_RWIN
 }
 
+VK_LCONTROL = 0xA2
+VK_RCONTROL = 0xA3
+
+HID_KEY = {
+    "A": 0x04, "B": 0x05, "C": 0x06, "D": 0x07, "E": 0x08, "F": 0x09,
+    "G": 0x0A, "H": 0x0B, "I": 0x0C, "J": 0x0D, "K": 0x0E, "L": 0x0F,
+    "M": 0x10, "N": 0x11, "O": 0x12, "P": 0x13, "Q": 0x14, "R": 0x15,
+    "S": 0x16, "T": 0x17, "U": 0x18, "V": 0x19, "W": 0x1A, "X": 0x1B,
+    "Y": 0x1C, "Z": 0x1D,
+    "1": 0x1E, "2": 0x1F, "3": 0x20, "4": 0x21, "5": 0x22,
+    "6": 0x23, "7": 0x24, "8": 0x25, "9": 0x26, "0": 0x27,
+    "ENTER": 0x28, "ESC": 0x29, "BACKSPACE": 0x2A, "TAB": 0x2B, "SPACE": 0x2C,
+    "MINUS": 0x2D, "EQUAL": 0x2E, "LBRACKET": 0x2F, "RBRACKET": 0x30,
+    "BACKSLASH": 0x31, "SEMICOLON": 0x33, "APOSTROPHE": 0x34, "GRAVE": 0x35,
+    "COMMA": 0x36, "PERIOD": 0x37, "SLASH": 0x38,
+}
+
+CHAR_TO_HID = {
+    "a": (0, HID_KEY["A"]), "b": (0, HID_KEY["B"]), "c": (0, HID_KEY["C"]),
+    "d": (0, HID_KEY["D"]), "e": (0, HID_KEY["E"]), "f": (0, HID_KEY["F"]),
+    "g": (0, HID_KEY["G"]), "h": (0, HID_KEY["H"]), "i": (0, HID_KEY["I"]),
+    "j": (0, HID_KEY["J"]), "k": (0, HID_KEY["K"]), "l": (0, HID_KEY["L"]),
+    "m": (0, HID_KEY["M"]), "n": (0, HID_KEY["N"]), "o": (0, HID_KEY["O"]),
+    "p": (0, HID_KEY["P"]), "q": (0, HID_KEY["Q"]), "r": (0, HID_KEY["R"]),
+    "s": (0, HID_KEY["S"]), "t": (0, HID_KEY["T"]), "u": (0, HID_KEY["U"]),
+    "v": (0, HID_KEY["V"]), "w": (0, HID_KEY["W"]), "x": (0, HID_KEY["X"]),
+    "y": (0, HID_KEY["Y"]), "z": (0, HID_KEY["Z"]),
+    "1": (0, HID_KEY["1"]), "2": (0, HID_KEY["2"]), "3": (0, HID_KEY["3"]),
+    "4": (0, HID_KEY["4"]), "5": (0, HID_KEY["5"]), "6": (0, HID_KEY["6"]),
+    "7": (0, HID_KEY["7"]), "8": (0, HID_KEY["8"]), "9": (0, HID_KEY["9"]),
+    "0": (0, HID_KEY["0"]),
+    " ": (0, HID_KEY["SPACE"]), "\t": (0, HID_KEY["TAB"]),
+    "\n": (0, HID_KEY["ENTER"]),
+    "-": (0, HID_KEY["MINUS"]), "=": (0, HID_KEY["EQUAL"]),
+    "[": (0, HID_KEY["LBRACKET"]), "]": (0, HID_KEY["RBRACKET"]),
+    "\\": (0, HID_KEY["BACKSLASH"]),
+    ";": (0, HID_KEY["SEMICOLON"]), "'": (0, HID_KEY["APOSTROPHE"]),
+    "`": (0, HID_KEY["GRAVE"]), ",": (0, HID_KEY["COMMA"]),
+    ".": (0, HID_KEY["PERIOD"]), "/": (0, HID_KEY["SLASH"]),
+    "!": (KeyboardModifier.SHIFT_LEFT, HID_KEY["1"]),
+    "@": (KeyboardModifier.SHIFT_LEFT, HID_KEY["2"]),
+    "#": (KeyboardModifier.SHIFT_LEFT, HID_KEY["3"]),
+    "$": (KeyboardModifier.SHIFT_LEFT, HID_KEY["4"]),
+    "%": (KeyboardModifier.SHIFT_LEFT, HID_KEY["5"]),
+    "^": (KeyboardModifier.SHIFT_LEFT, HID_KEY["6"]),
+    "&": (KeyboardModifier.SHIFT_LEFT, HID_KEY["7"]),
+    "*": (KeyboardModifier.SHIFT_LEFT, HID_KEY["8"]),
+    "(": (KeyboardModifier.SHIFT_LEFT, HID_KEY["9"]),
+    ")": (KeyboardModifier.SHIFT_LEFT, HID_KEY["0"]),
+    "_": (KeyboardModifier.SHIFT_LEFT, HID_KEY["MINUS"]),
+    "+": (KeyboardModifier.SHIFT_LEFT, HID_KEY["EQUAL"]),
+    "{": (KeyboardModifier.SHIFT_LEFT, HID_KEY["LBRACKET"]),
+    "}": (KeyboardModifier.SHIFT_LEFT, HID_KEY["RBRACKET"]),
+    "|": (KeyboardModifier.SHIFT_LEFT, HID_KEY["BACKSLASH"]),
+    ":": (KeyboardModifier.SHIFT_LEFT, HID_KEY["SEMICOLON"]),
+    "\"": (KeyboardModifier.SHIFT_LEFT, HID_KEY["APOSTROPHE"]),
+    "~": (KeyboardModifier.SHIFT_LEFT, HID_KEY["GRAVE"]),
+    "<": (KeyboardModifier.SHIFT_LEFT, HID_KEY["COMMA"]),
+    ">": (KeyboardModifier.SHIFT_LEFT, HID_KEY["PERIOD"]),
+    "?": (KeyboardModifier.SHIFT_LEFT, HID_KEY["SLASH"]),
+    "ą": (KeyboardModifier.ALT_RIGHT, HID_KEY["A"]),
+    "ć": (KeyboardModifier.ALT_RIGHT, HID_KEY["C"]),
+    "ę": (KeyboardModifier.ALT_RIGHT, HID_KEY["E"]),
+    "ł": (KeyboardModifier.ALT_RIGHT, HID_KEY["L"]),
+    "ń": (KeyboardModifier.ALT_RIGHT, HID_KEY["N"]),
+    "ó": (KeyboardModifier.ALT_RIGHT, HID_KEY["O"]),
+    "ś": (KeyboardModifier.ALT_RIGHT, HID_KEY["S"]),
+    "ż": (KeyboardModifier.ALT_RIGHT, HID_KEY["Z"]),
+    "ź": (KeyboardModifier.ALT_RIGHT, HID_KEY["X"]),
+    "Ą": (KeyboardModifier.ALT_RIGHT | KeyboardModifier.SHIFT_LEFT, HID_KEY["A"]),
+    "Ć": (KeyboardModifier.ALT_RIGHT | KeyboardModifier.SHIFT_LEFT, HID_KEY["C"]),
+    "Ę": (KeyboardModifier.ALT_RIGHT | KeyboardModifier.SHIFT_LEFT, HID_KEY["E"]),
+    "Ł": (KeyboardModifier.ALT_RIGHT | KeyboardModifier.SHIFT_LEFT, HID_KEY["L"]),
+    "Ń": (KeyboardModifier.ALT_RIGHT | KeyboardModifier.SHIFT_LEFT, HID_KEY["N"]),
+    "Ó": (KeyboardModifier.ALT_RIGHT | KeyboardModifier.SHIFT_LEFT, HID_KEY["O"]),
+    "Ś": (KeyboardModifier.ALT_RIGHT | KeyboardModifier.SHIFT_LEFT, HID_KEY["S"]),
+    "Ż": (KeyboardModifier.ALT_RIGHT | KeyboardModifier.SHIFT_LEFT, HID_KEY["Z"]),
+    "Ź": (KeyboardModifier.ALT_RIGHT | KeyboardModifier.SHIFT_LEFT, HID_KEY["X"]),
+}
+
 PYNPUT_TO_MOUSE_BUTTON = {
     mouse.Button.left: MouseButton.LEFT,
     mouse.Button.right: MouseButton.RIGHT,
@@ -152,12 +238,12 @@ PYNPUT_TO_MOUSE_BUTTON = {
 class BridgeConfig:
     port: str = ""
     baudrate: int = 115200
-    sensitivity: float = 1.0
+    sensitivity: float = 0.5
     poll_rate_hz: int = 125
     max_delta: int = 120
     reconnect_delay_seconds: float = 2.0
     reconnect_max_attempts: int = 5
-    toggle_key: keyboard.Key = keyboard.Key.pause
+    toggle_key: keyboard.Key = TOGGLE_KEY
 
 
 @dataclass
@@ -182,6 +268,22 @@ class InputState:
 
 _user32 = ctypes.windll.user32
 _kernel32 = ctypes.windll.kernel32
+
+CF_UNICODETEXT = 13
+
+_user32.OpenClipboard.argtypes = [wintypes.HWND]
+_user32.OpenClipboard.restype = wintypes.BOOL
+_user32.CloseClipboard.argtypes = []
+_user32.CloseClipboard.restype = wintypes.BOOL
+_user32.GetClipboardData.argtypes = [wintypes.UINT]
+_user32.GetClipboardData.restype = wintypes.HANDLE
+
+_kernel32.GlobalLock.argtypes = [wintypes.HGLOBAL]
+_kernel32.GlobalLock.restype = wintypes.LPVOID
+_kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
+_kernel32.GlobalUnlock.restype = wintypes.BOOL
+_kernel32.GlobalSize.argtypes = [wintypes.HGLOBAL]
+_kernel32.GlobalSize.restype = ctypes.c_size_t
 
 _LONG_PTR = ctypes.c_longlong if ctypes.sizeof(ctypes.c_void_p) == 8 else ctypes.c_long
 _WNDPROC = ctypes.WINFUNCTYPE(
@@ -265,12 +367,16 @@ class SerialBridge:
 
             for attempt in range(self._config.reconnect_max_attempts):
                 try:
-                    self._serial = serial.Serial(
-                        port=self._config.port,
-                        baudrate=self._config.baudrate,
-                        timeout=0.1,
-                        write_timeout=0.5,
-                    )
+                    self._serial = serial.Serial()
+                    self._serial.port = self._config.port
+                    self._serial.baudrate = self._config.baudrate
+                    self._serial.timeout = 0.1
+                    self._serial.write_timeout = 0.5
+                    
+                    self._serial.dtr = False
+                    self._serial.rts = False
+                    self._serial.open()
+
                     return True
                 except serial.SerialException:
                     if attempt < self._config.reconnect_max_attempts - 1:
@@ -346,11 +452,17 @@ class SerialBridge:
 
     @staticmethod
     def find_esp32_port():
-        known_chips = ("CP210", "CH34", "FTDI", "USB-SERIAL")
+        known_chips = ("CP210", "CH34", "FTDI", "USB-SERIAL", "JTAG", "WCH")
+        espressif_vids = ("303A",)
 
         for port_info in serial.tools.list_ports.comports():
-            description = (port_info.description or "").upper()
-            if any(chip in description for chip in known_chips):
+            desc = (port_info.description or "").upper()
+            hwid = (port_info.hwid or "").upper()
+            
+            if any(chip in desc for chip in known_chips) or "USB SERIAL DEVICE" in desc:
+                return port_info.device
+                
+            if any(vid in hwid for vid in espressif_vids):
                 return port_info.device
 
         return None
@@ -500,6 +612,9 @@ class KVMController:
         self._is_active = False
         self._is_running = True
         self._exit_requested = False
+        self._is_pasting = False
+        self._paste_cancel_requested = False
+        self._ctrl_physical_down = False
 
     def run(self):
         if not self._bridge.connect():
@@ -601,6 +716,18 @@ class KVMController:
         if vk is None:
             return
 
+        if vk in (VK_LCONTROL, VK_RCONTROL):
+            self._ctrl_physical_down = True
+
+        if self._is_pasting:
+            if vk == PASTE_TRIGGER_VK and self._ctrl_physical_down:
+                self._paste_cancel_requested = True
+            return
+
+        if vk == PASTE_TRIGGER_VK and (self._state.active_modifiers & PASTE_TRIGGER_MODIFIERS):
+            self._start_clipboard_paste()
+            return
+
         modifier = VK_TO_MODIFIER.get(vk)
         if modifier is not None:
             self._state.active_modifiers |= modifier
@@ -618,6 +745,12 @@ class KVMController:
 
         vk = self._get_vk_from_key(key)
         if vk is None:
+            return
+
+        if vk in (VK_LCONTROL, VK_RCONTROL):
+            self._ctrl_physical_down = False
+
+        if self._is_pasting:
             return
 
         modifier = VK_TO_MODIFIER.get(vk)
@@ -700,6 +833,87 @@ class KVMController:
     @staticmethod
     def _clamp(value, min_val, max_val):
         return max(min_val, min(max_val, value))
+
+    def _type_clipboard_as_keystrokes(self):
+        try:
+            self._release_control_modifiers()
+            self._clear_keyboard_state()
+            text = self._get_clipboard_text()
+            if not text:
+                return
+
+            normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+
+            for ch in normalized:
+                if self._paste_cancel_requested:
+                    break
+                key_info = self._translate_char_to_hid(ch)
+                if key_info is None:
+                    continue
+                modifiers, keycode = key_info
+                self._send_keypress(modifiers, keycode)
+                time.sleep(0.04)
+        finally:
+            self._is_pasting = False
+
+    def _start_clipboard_paste(self):
+        if self._is_pasting:
+            return
+
+        self._is_pasting = True
+        self._paste_cancel_requested = False
+        threading.Thread(target=self._type_clipboard_as_keystrokes, daemon=True).start()
+
+    def _send_keypress(self, modifiers, keycode):
+        self._bridge.send_keyboard_report(modifiers, [keycode])
+        self._bridge.send_keyboard_report(0, [])
+
+    def _release_control_modifiers(self):
+        ctrl_mask = KeyboardModifier.CTRL_LEFT | KeyboardModifier.CTRL_RIGHT
+        if self._state.active_modifiers & ctrl_mask:
+            self._state.active_modifiers &= ~ctrl_mask
+            self._sync_keyboard_state()
+
+    def _clear_keyboard_state(self):
+        if self._state.pressed_keys or self._state.active_modifiers:
+            self._state.pressed_keys.clear()
+            self._state.active_modifiers = 0
+        self._bridge.send_keyboard_report(0, [])
+
+    def _translate_char_to_hid(self, ch):
+        if ch in CHAR_TO_HID:
+            return CHAR_TO_HID[ch]
+
+        if "A" <= ch <= "Z":
+            return KeyboardModifier.SHIFT_LEFT, HID_KEY[ch]
+
+        return None
+
+    @staticmethod
+    def _get_clipboard_text():
+        if not _user32.OpenClipboard(None):
+            return ""
+
+        handle = None
+        try:
+            handle = _user32.GetClipboardData(CF_UNICODETEXT)
+            if not handle:
+                return ""
+
+            locked = _kernel32.GlobalLock(handle)
+            if not locked:
+                return ""
+
+            try:
+                size = _kernel32.GlobalSize(handle)
+                if not size:
+                    return ""
+                length = size // ctypes.sizeof(ctypes.c_wchar)
+                return ctypes.wstring_at(locked, length).rstrip("\x00")
+            finally:
+                _kernel32.GlobalUnlock(handle)
+        finally:
+            _user32.CloseClipboard()
 
 
 def main():
