@@ -54,7 +54,7 @@ class KeyboardModifier(IntFlag):
     GUI_RIGHT = 0x80
 
 
-# Konfiguracja skrótów
+# Shortcut keys configuration
 TOGGLE_KEY = keyboard.Key.scroll_lock
 PASTE_TRIGGER_VK = 0x2D  # VK_INSERT
 PASTE_TRIGGER_MODIFIERS = KeyboardModifier.CTRL_LEFT | KeyboardModifier.CTRL_RIGHT

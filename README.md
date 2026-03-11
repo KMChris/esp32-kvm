@@ -71,9 +71,9 @@ A project that allows you to use your PC (Windows) keyboard and mouse to control
    ```
 4. **Control**:
    - The script will connect to the ESP32.
-   - Press the **PAUSE / BREAK** key to toggle remote mode.
+   - Press the **SCROLL LOCK** key to toggle remote mode.
    - In remote mode, your mouse and keyboard control the Bluetooth device.
-   - Press **PAUSE / BREAK** again to return to controlling your PC.
+   - Press **SCROLL LOCK** again to return to controlling your PC.
 
 ## Project Structure
 
