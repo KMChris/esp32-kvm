@@ -1,5 +1,50 @@
 # ESP32 BLE KVM Bridge
 
+## macOS + PlatformIO branch
+
+This `macos-platformio-bridge` branch retains the upstream ESP-IDF BLE HID firmware and adds:
+
+- PlatformIO ESP-IDF build/flash support for the ESP32-WROOM `esp32dev` board.
+- A cross-platform Python source bridge in `host/`, tested on macOS.
+- Keyboard and mouse UART packet encoding compatible with the firmware protocol.
+- Serial status events for boot, BLE advertising, bonding, connections, and report counters.
+
+The ESP32 advertises as `ESP32-Personal-KVM`. Pair the target device first, then run the Python bridge from the source Mac. Wi-Fi is intentionally not used by this KVM architecture; no Wi-Fi credentials are copied into this repository.
+
+### macOS source setup
+
+```bash
+cd /Users/leonn/work/aperture/esp32-kvm
+python3 -m pip install -r host/requirements.txt
+```
+
+Grant the terminal application **Accessibility** and **Input Monitoring** in macOS Privacy & Security settings, then run:
+
+```bash
+PYTHONPATH=host python3 host/main.py --port /dev/cu.usbserial-0001
+```
+
+Hold `Control` + `Option` + `Command` + `F` together to enter or exit remote mode. Override with a simultaneous `--toggle` chord such as `--toggle ctrl+alt+cmd+g`.
+
+For serial reporting, stop the bridge first because both programs require the same serial port:
+
+```bash
+PYTHONPATH=host python3 host/serial_monitor.py --port /dev/cu.usbserial-0001 --seconds 30
+```
+
+### PlatformIO build and flash
+
+```bash
+PIO=/tmp/pio311/bin/platformio
+PORT=/dev/cu.usbserial-0001
+
+$PIO run -e esp32_wroom
+$PIO run -e esp32_wroom -t upload --upload-port "$PORT"
+PYTHONPATH=host python3 host/serial_monitor.py --port "$PORT" --seconds 30
+```
+
+---
+
 A project that allows you to use your PC (Windows) keyboard and mouse to control another device (smartphone, tablet, laptop) via Bluetooth Low Energy (BLE), using an ESP32 as a bridge.
 
 ## How it works

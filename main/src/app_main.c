@@ -3,6 +3,7 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "esp_timer.h"
+#include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
@@ -23,6 +24,8 @@
 #define UART_BUF_SIZE    1024
 #define EVT_ADV_READY    (1 << 1)
 
+static const char *TAG = "kvm";
+
 typedef struct {
     int16_t id;
     esp_bd_addr_t addr;
@@ -31,6 +34,8 @@ typedef struct {
 static struct {
     conn_slot_t slots[MAX_CONN];
     uint8_t mouse_btn;
+    uint32_t keyboard_reports;
+    uint32_t mouse_reports;
     int64_t last_activity;
     EventGroupHandle_t events;
     proto_ctx_t proto;
@@ -41,16 +46,24 @@ static const uint8_t svc_uuid[] = {
     0x00, 0x10, 0x00, 0x00, 0x12, 0x18, 0x00, 0x00,
 };
 
+static uint8_t adv_config_pending;
+
 static esp_ble_adv_data_t adv_data = {
     .set_scan_rsp = false,
-    .include_name = true,
-    .include_txpower = true,
+    .include_name = false,
+    .include_txpower = false,
     .min_interval = 0x000A,
     .max_interval = 0x0010,
     .appearance = 0x03c1,
     .service_uuid_len = sizeof(svc_uuid),
     .p_service_uuid = (uint8_t *)svc_uuid,
     .flag = 0x6,
+};
+
+static esp_ble_adv_data_t scan_rsp_data = {
+    .set_scan_rsp = true,
+    .include_name = true,
+    .include_txpower = false,
 };
 
 static esp_ble_adv_params_t adv_params = {
@@ -68,6 +81,13 @@ static inline bool has_connection(void) {
     return false;
 }
 
+static uint8_t connection_count(void) {
+    uint8_t count = 0;
+    for (uint8_t i = 0; i < MAX_CONN; i++)
+        if (g.slots[i].id >= 0) count++;
+    return count;
+}
+
 static void broadcast_kbd(const kbd_report_t *rpt) {
     if (!has_connection()) return;
     for (uint8_t i = 0; i < MAX_CONN; i++) {
@@ -75,6 +95,7 @@ static void broadcast_kbd(const kbd_report_t *rpt) {
             esp_hidd_send_keyboard_value((uint16_t)g.slots[i].id, rpt->mods, (uint8_t *)rpt->keys, 6);
     }
     g.last_activity = esp_timer_get_time();
+    g.keyboard_reports++;
 }
 
 static void broadcast_mouse(const mouse_report_t *rpt) {
@@ -85,6 +106,7 @@ static void broadcast_mouse(const mouse_report_t *rpt) {
     }
     g.last_activity = esp_timer_get_time();
     g.mouse_btn = rpt->buttons;
+    g.mouse_reports++;
 }
 
 static void idle_keepalive(void *arg) {
@@ -98,12 +120,30 @@ static void idle_keepalive(void *arg) {
     }
 }
 
+static void report_status(void *arg) {
+    (void)arg;
+    ESP_LOGI(TAG, "status connections=%u keyboard_reports=%lu mouse_reports=%lu",
+             connection_count(),
+             (unsigned long)g.keyboard_reports,
+             (unsigned long)g.mouse_reports);
+}
+
+static void start_advertising_when_ready(void) {
+    if (adv_config_pending != 0) return;
+    esp_ble_gap_start_advertising(&adv_params);
+    xEventGroupSetBits(g.events, EVT_ADV_READY);
+    ESP_LOGI(TAG, "BLE advertising started");
+}
+
 static void on_hidd_event(esp_hidd_cb_event_t ev, esp_hidd_cb_param_t *p) {
     switch (ev) {
     case ESP_HIDD_EVENT_REG_FINISH:
         if (p->init_finish.state == ESP_HIDD_INIT_OK) {
             esp_ble_gap_set_device_name(APP_BLE_DEVICE_NAME);
+            adv_config_pending = 0x03;
             esp_ble_gap_config_adv_data(&adv_data);
+            esp_ble_gap_config_adv_data(&scan_rsp_data);
+            ESP_LOGI(TAG, "BLE HID initialized as '%s'", APP_BLE_DEVICE_NAME);
         }
         break;
 
@@ -121,6 +161,7 @@ static void on_hidd_event(esp_hidd_cb_event_t ev, esp_hidd_cb_param_t *p) {
         memcpy(cp.bda, p->connect.remote_bda, sizeof(esp_bd_addr_t));
         esp_ble_gap_update_conn_params(&cp);
         esp_ble_gap_start_advertising(&adv_params);
+        ESP_LOGI(TAG, "BLE client connected; connections=%u", connection_count());
         break;
 
     case ESP_HIDD_EVENT_BLE_DISCONNECT:
@@ -133,6 +174,7 @@ static void on_hidd_event(esp_hidd_cb_event_t ev, esp_hidd_cb_param_t *p) {
         }
         esp_ble_gap_start_advertising(&adv_params);
         xEventGroupSetBits(g.events, EVT_ADV_READY);
+        ESP_LOGI(TAG, "BLE client disconnected; advertising restarted");
         break;
 
     default:
@@ -143,8 +185,13 @@ static void on_hidd_event(esp_hidd_cb_event_t ev, esp_hidd_cb_param_t *p) {
 static void on_gap_event(esp_gap_ble_cb_event_t ev, esp_ble_gap_cb_param_t *p) {
     switch (ev) {
     case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-        esp_ble_gap_start_advertising(&adv_params);
-        xEventGroupSetBits(g.events, EVT_ADV_READY);
+        adv_config_pending = (uint8_t)(adv_config_pending & (uint8_t)~0x01U);
+        start_advertising_when_ready();
+        break;
+
+    case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT:
+        adv_config_pending = (uint8_t)(adv_config_pending & (uint8_t)~0x02U);
+        start_advertising_when_ready();
         break;
 
     case ESP_GAP_BLE_SEC_REQ_EVT:
@@ -152,8 +199,12 @@ static void on_gap_event(esp_gap_ble_cb_event_t ev, esp_ble_gap_cb_param_t *p) {
         break;
 
     case ESP_GAP_BLE_AUTH_CMPL_EVT:
-        if (p->ble_security.auth_cmpl.success)
+        if (p->ble_security.auth_cmpl.success) {
             xEventGroupClearBits(g.events, EVT_ADV_READY);
+            ESP_LOGI(TAG, "BLE bonding successful");
+        } else {
+            ESP_LOGW(TAG, "BLE bonding failed, reason=%d", p->ble_security.auth_cmpl.fail_reason);
+        }
         break;
 
     default:
@@ -235,6 +286,7 @@ static void ble_init(void) {
 
 void app_main(void) {
     uart_init();
+    ESP_LOGI(TAG, "ESP32 KVM boot; UART bridge ready at 115200 baud");
 
     g.events = xEventGroupCreate();
     proto_init(&g.proto, broadcast_kbd, broadcast_mouse);
@@ -246,4 +298,9 @@ void app_main(void) {
     esp_timer_create_args_t timer_args = {.callback = idle_keepalive, .name = "idle"};
     esp_timer_create(&timer_args, &timer);
     esp_timer_start_periodic(timer, 100000);
+
+    esp_timer_handle_t status_timer;
+    esp_timer_create_args_t status_timer_args = {.callback = report_status, .name = "status"};
+    esp_timer_create(&status_timer_args, &status_timer);
+    esp_timer_start_periodic(status_timer, 5000000);
 }
