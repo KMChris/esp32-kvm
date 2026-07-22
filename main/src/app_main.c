@@ -16,7 +16,9 @@
 #endif
 
 #include "ble_hid_api.h"
+#include "status_led.h"
 #include "uart_proto.h"
+#include "wifi_udp.h"
 #include "app_config.h"
 
 #define MAX_CONN         CONFIG_BT_ACL_CONNECTIONS
@@ -212,7 +214,7 @@ static void on_gap_event(esp_gap_ble_cb_event_t ev, esp_ble_gap_cb_param_t *p) {
     }
 }
 
-static void uart_rx_task(void *arg) {
+static void __attribute__((unused)) uart_rx_task(void *arg) {
     (void)arg;
     uint8_t byte;
     while (1) {
@@ -225,7 +227,7 @@ static void uart_rx_task(void *arg) {
     }
 }
 
-static void uart_init(void) {
+static void __attribute__((unused)) uart_init(void) {
 #if CONFIG_IDF_TARGET_ESP32C3
     usb_serial_jtag_driver_config_t cfg = {
         .rx_buffer_size = UART_BUF_SIZE,
@@ -285,14 +287,24 @@ static void ble_init(void) {
 }
 
 void app_main(void) {
+#if CONFIG_APP_INPUT_MODE_SERIAL
     uart_init();
-    ESP_LOGI(TAG, "ESP32 KVM boot; UART bridge ready at 115200 baud");
+    status_led_init(STATUS_LED_SERIAL);
+    ESP_LOGI(TAG, "ESP32 KVM boot; serial input ready at 115200 baud");
+#else
+    status_led_init(STATUS_LED_WIFI_UDP);
+    ESP_LOGI(TAG, "ESP32 KVM boot; Wi-Fi SoftAP + UDP input selected");
+#endif
 
     g.events = xEventGroupCreate();
     proto_init(&g.proto, broadcast_kbd, broadcast_mouse);
     ble_init();
 
+#if CONFIG_APP_INPUT_MODE_SERIAL
     xTaskCreate(uart_rx_task, "uart", 4096, NULL, configMAX_PRIORITIES - 5, NULL);
+#else
+    wifi_udp_start(&g.proto);
+#endif
 
     esp_timer_handle_t timer;
     esp_timer_create_args_t timer_args = {.callback = idle_keepalive, .name = "idle"};

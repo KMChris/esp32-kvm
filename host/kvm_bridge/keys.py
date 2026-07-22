@@ -30,6 +30,17 @@ _CHAR_USAGES = {
     "*": 0x25,
     "(": 0x26,
     ")": 0x27,
+    "_": 0x2D,
+    "+": 0x2E,
+    "{": 0x2F,
+    "}": 0x30,
+    "|": 0x31,
+    ":": 0x33,
+    '"': 0x34,
+    "~": 0x35,
+    "<": 0x36,
+    ">": 0x37,
+    "?": 0x38,
 }
 
 _NAMED_USAGES = {
@@ -70,6 +81,12 @@ _MODIFIERS = {
     "cmd_r": 0x80,
 }
 
+_MACOS_PUNCTUATION_VKS = {
+    39: 0x34,  # apostrophe / quote
+    41: 0x33,  # semicolon / colon
+    50: 0x35,  # grave accent / tilde
+}
+
 
 def usage_for_char(value: str) -> int:
     return _CHAR_USAGES.get(value.lower() if value.isalpha() else value, 0)
@@ -77,6 +94,10 @@ def usage_for_char(value: str) -> int:
 
 def usage_for_name(name: str) -> int:
     return _NAMED_USAGES.get(name.lower(), 0)
+
+
+def usage_for_vk(value: int | None) -> int:
+    return _MACOS_PUNCTUATION_VKS.get(value, 0) if value is not None else 0
 
 
 def modifier_for_name(name: str) -> int:

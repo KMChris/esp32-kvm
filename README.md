@@ -9,7 +9,33 @@ This `macos-platformio-bridge` branch retains the upstream ESP-IDF BLE HID firmw
 - Keyboard and mouse UART packet encoding compatible with the firmware protocol.
 - Serial status events for boot, BLE advertising, bonding, connections, and report counters.
 
-The ESP32 advertises as `ESP32-Personal-KVM`. Pair the target device first, then run the Python bridge from the source Mac. Wi-Fi is intentionally not used by this KVM architecture; no Wi-Fi credentials are copied into this repository.
+The ESP32 advertises as `ESP32-Personal-KVM`. Pair the target device first, then run the Python bridge from the source Mac.
+
+### Input transport modes
+
+`Application -> Input transport` in PlatformIO `menuconfig` selects the source-to-ESP32 link:
+
+| Mode | ESP32 input link | Onboard status LED |
+|---|---|---|
+| USB serial (default) | USB UART at 115200 baud | Smooth fading pulse |
+| Wi-Fi SoftAP + UDP | ESP32 WPA2 SoftAP, UDP port 3333 | Normal on/off blink |
+
+The default onboard LED pin is GPIO2. Change `Application -> Status LED GPIO` or enable `Status LED is active low` if your board uses a different LED wiring.
+
+To enable Wi-Fi input, select `Wi-Fi SoftAP + UDP` with:
+
+```bash
+PIO=/tmp/pio311/bin/platformio
+$PIO run -e esp32_wroom -t menuconfig
+```
+
+Under `Application`, set a unique SoftAP password of at least 12 characters before flashing; Wi-Fi UDP refuses to start without one. Defaults are SSID `ESP32-Personal-KVM`, channel `6`, gateway `192.168.4.1`, and UDP port `3333`. After flashing, join the Mac to that SoftAP (no router or Internet is needed), then run:
+
+```bash
+PYTHONPATH=host python3 host/main.py --transport udp
+```
+
+Use `--udp-host` and `--udp-port` to override the gateway or port. USB serial remains available as the recovery/debug transport when the serial mode firmware is flashed.
 
 ### macOS source setup
 
@@ -25,6 +51,8 @@ PYTHONPATH=host python3 host/main.py --port /dev/cu.usbserial-0001
 ```
 
 Hold `Control` + `Option` + `Command` + `F` together to enter or exit remote mode. Override with a simultaneous `--toggle` chord such as `--toggle ctrl+alt+cmd+g`.
+
+On macOS, leaving remote mode releases the BLE HID state, then restarts the bridge process with the same command-line options. This deliberately resets pynput's suppressing event tap so source keyboard and mouse control is reliably restored; the restarted bridge is immediately ready for the next remote session.
 
 For serial reporting, stop the bridge first because both programs require the same serial port:
 
