@@ -11,6 +11,7 @@ from typing import Any
 from kvm_bridge.controller import RemoteInputController
 from kvm_bridge.keys import modifier_for_name, usage_for_char, usage_for_name, usage_for_vk
 from kvm_bridge.serial_bridge import SerialPacketSink
+from kvm_bridge.tcp_bridge import TcpPacketSink
 from kvm_bridge.toggle import ToggleChord
 from kvm_bridge.udp_bridge import UdpPacketSink
 
@@ -144,14 +145,14 @@ class PynputCapture:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--transport", choices=("serial", "udp"), default="serial",
+    parser.add_argument("--transport", choices=("serial", "udp", "tcp"), default="serial",
                         help="source-to-ESP32 transport; defaults to serial")
     parser.add_argument("--port", help="ESP32 serial port; auto-detected when unambiguous")
     parser.add_argument("--baud", type=int, default=115200)
     parser.add_argument("--udp-host", default="192.168.4.1",
                         help="ESP32 SoftAP gateway IP for --transport udp")
     parser.add_argument("--udp-port", type=udp_port, default=3333,
-                        help="ESP32 UDP input port for --transport udp")
+                        help="input port for --transport udp or --transport tcp")
     parser.add_argument("--toggle", default=DEFAULT_TOGGLE,
                         help="simultaneous '+'-separated toggle chord; defaults to ctrl+alt+cmd+f")
     return parser.parse_args(argv)
@@ -165,9 +166,12 @@ def main() -> int:
             raise SystemExit("ESP32 serial port not found; pass --port /dev/cu.usbserial-... explicitly")
         sink = SerialPacketSink(port, args.baud)
         description = f"Serial bridge connected: {port} at {args.baud} baud"
-    else:
+    elif args.transport == "udp":
         sink = UdpPacketSink(args.udp_host, args.udp_port)
         description = f"UDP bridge connected: {args.udp_host}:{args.udp_port}"
+    else:
+        sink = TcpPacketSink(args.udp_host, args.udp_port)
+        description = f"TCP bridge connected: {args.udp_host}:{args.udp_port}"
     sink.open()
     print(f"[READY] {description}")
     restart = False
