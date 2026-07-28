@@ -1,4 +1,7 @@
 .vscode/
+.pio/
 __pycache__/
 build/
 sdkconfig
+sdkconfig.*
+!sdkconfig.defaults

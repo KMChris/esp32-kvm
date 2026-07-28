@@ -1,0 +1,2 @@
+pyserial>=3.5,<4
+pynput>=1.7,<2

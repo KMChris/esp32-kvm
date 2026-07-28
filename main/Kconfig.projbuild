@@ -4,4 +4,54 @@ config APP_BLE_DEVICE_NAME
     string "BLE device name"
     default "ESP32"
 
+choice APP_INPUT_MODE
+    prompt "Input transport"
+    default APP_INPUT_MODE_SERIAL
+
+config APP_INPUT_MODE_SERIAL
+    bool "USB serial (fading status LED)"
+
+config APP_INPUT_MODE_WIFI_UDP
+    bool "Wi-Fi SoftAP + UDP (blinking status LED)"
+
+endchoice
+
+if APP_INPUT_MODE_WIFI_UDP
+
+config APP_WIFI_AP_SSID
+    string "Wi-Fi SoftAP SSID"
+    default "ESP32-Personal-KVM"
+
+config APP_WIFI_AP_PASSWORD
+    string "Wi-Fi SoftAP WPA2 password"
+    default ""
+
+config APP_WIFI_AP_CHANNEL
+    int "Wi-Fi SoftAP channel"
+    range 1 13
+    default 6
+
+config APP_WIFI_AP_MAX_CONNECTIONS
+    int "Wi-Fi SoftAP maximum clients"
+    range 1 10
+    default 1
+
+config APP_WIFI_UDP_PORT
+    int "UDP input port"
+    range 1 65535
+    default 3333
+
+endif
+
+config APP_STATUS_LED_GPIO
+    int "Status LED GPIO"
+    range 0 33
+    default 2
+    help
+        ESP32 DevKit boards commonly expose their onboard LED on GPIO2.
+
+config APP_STATUS_LED_INVERTED
+    bool "Status LED is active low"
+    default n
+
 endmenu
